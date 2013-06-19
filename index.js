@@ -5,6 +5,31 @@ var pipe = false;
 var map = false;
 var DEFAULT_PATH = '/omx';
 
+var playerState = {
+    notFoundRegex : 'File not found',
+	errorRegex : 'audio player error',
+	finishedRegex : 'have a nice day',
+	STOPPED : 0, NOFILE  : 1, PLAYING : 2, PAUSED  : 3, ERROR  : 4,	UNKNOWN : 5,
+	stateStrings : ['STOPPED', 'NOFILE', 'PLAYING', 'PAUSED', 'ERROR', 'UNKNOWN'],
+	currentState : this.STOPPED,
+	setState : function(s,f) {
+		this.currentState = (0>=s<=5)?s:this.UNKNOWN;
+		if (f != undefined && f != null) { f(this); }
+	},
+	setStateFromMessage : function(m,f) {
+		if (m.match(this.notFoundRegex) != null) { this.currentState = this.NOFILE;	} 
+		else if (m.match(this.errorRegex) != null) { this.currentState = this.ERROR; } 
+		else if (m.match(this.finishedRegex) != null) {	this.currentState = this.STOPPED; } 
+		else { this.currentState = this.UNKNOWN; }
+		if (f != undefined && f != null) { f(this); }
+	},
+	getState : function() {	return this.currentState; },
+	getStateString : function() { 
+		console.log("Current state: ", this.currentState);
+		return this.stateStrings[this.currentState]; 
+	}
+};
+
 function omx(mapper) {
     map = mapper;
     return omx.express;
@@ -35,7 +60,7 @@ omx.express = function(req,res,next) {
     next();
 };
 
-omx.start = function(fn) {
+omx.start = function(fn,scf) {
     if (!pipe) {
         pipe = 'omxcontrol';
         exec('mkfifo '+pipe);
@@ -43,14 +68,15 @@ omx.start = function(fn) {
     if (map) {
         map(fn,cb);
     } else {
-        cb(fn);
+        cb(fn,scf);
     }
 
-    function cb(fn) {
+    function cb(fn,scf) {
         console.log(fn);
-        exec('omxplayer -o hdmi "'+fn+'" < '+pipe,function(error, stdout, stderr) {
+        var alpha = exec('omxplayer -o hdmi "'+fn+'" < '+pipe,function(error, stdout, stderr) {
             console.log(stdout);
         });
+        alpha.stdout.on('data', function(data) { playerState.setStateFromMessage(data, scf); });
         exec('echo . > '+pipe);
     }
 };
