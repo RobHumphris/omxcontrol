@@ -1,7 +1,7 @@
 omxcontrol
 ==========
 
-Nodejs module to control omxplayer. Specifically written for the raspberry pi
+Nodejs module to control omxplayer. Specifically written for the raspberry pi. Changed to contain the player state.
 
 Requirements
 ------------
@@ -10,37 +10,13 @@ Requirements
 * nodejs (`apt-get install nodejs`)
 * express (optional)
 
-Install
--------
-
-    npm install omxcontrol
-
 Usage
 -----
 
-Basic usage
-    
-    omx = require('omxcontrol');
+See the main omxplayer repo to see the proper Usage.
 
-    omx.start(filename);
+The difference is that you call start, and pass a function, this function will be called each time the player's state changes, here we just show the state in the console:
 
-    omx.pause();
-
-    omx.quit();
-
-Use with express as middleware. This type of usage exposes the above methods as an http api:
-
-    omx = require('omxcontrol');
-    express.use(omx());
-
-    http://localhost/omx/start/:filename
-    http://localhost/omx/pause
-    http://localhost/omx/quit
-
-You actually might not want to pass the real file name to the http api, probably to simplify things, but in my case, omxplayer needs a specific url to play youtube video. For this usecase, `omx()` can be passed a mapping function to map the filename to something else. Calling the provided start method is required to actually start the video. Your logic can be async and even choose not to start things:
-
-    omx = require('omxcontrol');
-    express.use(omx(function(fn,start) {
-        //do something special
-        start(fn);
-    }));
+omx.start(fileName, function(playerState) {
+    console.log("~~~", playerState.getStateString());
+});
