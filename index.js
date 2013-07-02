@@ -6,6 +6,7 @@ var map = false;
 var DEFAULT_PATH = '/omx';
 
 var playerState = {
+	startedRegex : 'codec',
     notFoundRegex : 'File not found',
 	errorRegex : 'audio player error',
 	finishedRegex : 'have a nice day',
@@ -17,7 +18,8 @@ var playerState = {
 		if (f != undefined && f != null) { f(this); }
 	},
 	setStateFromMessage : function(m,f) {
-		if (m.match(this.notFoundRegex) != null) { this.currentState = this.NOFILE;	} 
+		console.log("SHEEP:", m);
+		if (m.match(this.notFoundRegex) != null) { this.currentState = this.NOFILE; } 
 		else if (m.match(this.errorRegex) != null) { this.currentState = this.ERROR; } 
 		else if (m.match(this.finishedRegex) != null) {	this.currentState = this.STOPPED; } 
 		else { this.currentState = this.UNKNOWN; }
@@ -72,14 +74,17 @@ omx.start = function(fn,scf) {
     }
 
     function cb(fn,scf) {
-        console.log(fn);
-        var alpha = exec('omxplayer -o hdmi "'+fn+'" < '+pipe,function(error, stdout, stderr) {
-            console.log(stdout);
-        });
+		if (playerState.getState() === playerState.PLAYING) {
+			console.log("$t0pp1ng");
+			omx.quit();
+		}
+        var alpha = exec('omxplayer -o hdmi "'+fn+'" < '+pipe);
+		playerState.setState(playerState.PLAYING, scf);
         alpha.stdout.on('data', function(data) { playerState.setStateFromMessage(data, scf); });
         exec('echo . > '+pipe);
     }
 };
+
 
 omx.sendKey = function(key) {
     if (!pipe) return;
@@ -99,6 +104,7 @@ omx.mapKey('pause','p');
 omx.mapKey('quit','q',function() {
     exec('rm '+pipe);
     pipe = false;
+	playerState.setState(playerState.STOPPED);
 });
 omx.mapKey('play','.');
 omx.mapKey('forward',"$'\\x1b\\x5b\\x43'");
